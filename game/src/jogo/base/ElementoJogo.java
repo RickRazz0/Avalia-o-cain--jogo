@@ -1,5 +1,8 @@
+package jogo.base;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+
+import jogo.jogadores.Jogador;
 
 // ABSTRAÇÃO (Aula 05 / ScreenSaver): Molde genérico para qualquer peça do jogo
 public abstract class ElementoJogo {

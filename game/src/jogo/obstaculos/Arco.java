@@ -1,5 +1,9 @@
+package jogo.obstaculos;
 import java.awt.Color;
 import java.awt.Graphics;
+
+import jogo.base.ElementoJogo;
+import jogo.jogadores.Jogador;
 
 // HERANÇA: Arco também estende ElementoJogo[cite: 4, 6]
 public class Arco extends ElementoJogo {
