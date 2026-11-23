@@ -16,7 +16,7 @@ public class Jogador extends ElementoJogo {
 
     public Jogador(int x, int y, Color cor) {
         super(x, y, 30, 30);
-        this.velocidadeX = 4; // Reduzido de 6 para 4 (controle mais preciso!)
+        this.velocidadeX = 4;
         this.velocidadeY = 0;
         this.noChao = false;
         this.cor = cor;
@@ -25,10 +25,9 @@ public class Jogador extends ElementoJogo {
     }
 
     public void aplicarGravidade() {
-        // Se já venceu ou morreu neste round, congela o jogador imediatamente
         if (venceuNoRound || morreuNoRound) return;
 
-        if (velocidadeY < 10) { // Queda máxima um pouco mais suave (era 12)
+        if (velocidadeY < 10) {
             velocidadeY += 1;
         }
         setY(getY() + velocidadeY);
@@ -41,7 +40,7 @@ public class Jogador extends ElementoJogo {
 
     public void pular() {
         if (noChao) {
-            velocidadeY = -14; // Pulo ajustado para acompanhar a nova velocidade (era -16)
+            velocidadeY = -14;
             noChao = false;
         }
     }
@@ -50,20 +49,18 @@ public class Jogador extends ElementoJogo {
     public void moverDireita()  { setX(getX() + velocidadeX); }
 
     public void morrer() {
-        // PROTEÇÃO: Se o jogador já tocou na bandeira, ele NÃO pode morrer depois!
         if (this.venceuNoRound) return;
         this.morreuNoRound = true;
     }
 
     public void vencer() {
-        // Se ainda não morreu, garante a vitória!
         if (!this.morreuNoRound) {
             this.venceuNoRound = true;
         }
     }
 
-    public void resetarParaNovoRound() {
-        setX(80);
+    public void resetarParaNovoRound(int xInicial) {
+        setX(xInicial);
         setY(350);
         velocidadeY = 0;
         noChao = false;

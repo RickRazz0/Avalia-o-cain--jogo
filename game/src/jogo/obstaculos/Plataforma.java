@@ -9,16 +9,30 @@ import jogo.jogadores.Jogador;
 public class Plataforma extends ElementoJogo {
 
     private Color cor;
+    private String tipo; // Ex.: "CHAO", "MADEIRA", "DEGRAU"
 
     public Plataforma(int x, int y, int largura, int altura, Color cor) {
+        this(x, y, largura, altura, cor, "MADEIRA");
+    }
+
+    public Plataforma(int x, int y, int largura, int altura, Color cor, String tipo) {
         super(x, y, largura, altura);
         this.cor = cor;
+        this.tipo = tipo;
+    }
+
+    public String getTipo() {
+        return tipo;
     }
 
     @Override
     public void desenhar(Graphics g) {
         g.setColor(cor);
         g.fillRect(getX(), getY(), getLargura(), getAltura());
+
+        // Detalhe visual simples para diferenciar degrau/madeira
+        g.setColor(cor.darker());
+        g.drawRect(getX(), getY(), getLargura(), getAltura());
     }
 
     @Override
