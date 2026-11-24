@@ -33,7 +33,7 @@ public class Armadilha extends ElementoJogo {
 
         setX(getX() + velocidadeX);
 
-        boolean saiuDoMapa = (getX() + getLargura() < 0) || (getX() > 800);
+        boolean saiuDoMapa = (getX() + getLargura() < 0) || (getX() > 1280);
         boolean bateuEmSolido = false;
 
         if (pecasDoMapa != null) {

@@ -44,12 +44,18 @@ public class FaseConstrucao {
         }
     }
 
-    private final int TAM_GRADE = 40;
-    private final int LARGURA_PERGAMINHO_MAX = 560;
-    private final int ALTURA_PERGAMINHO = 340;
+    private final int TAM_GRADE = 20;
+    private final int LARGURA_PERGAMINHO_MAX = 640;
+    private final int ALTURA_PERGAMINHO = 360;
+
+    // Area livre do quadriculado no palco 1280x720 (multiplos de 20)
+    private final int MIN_X = 40;
+    private final int MAX_X = 1240;
+    private final int MIN_Y = 80;
+    private final int MAX_Y = 660;
 
     private boolean ativa;
-    private boolean menuPergaminhoAberto; // true = escolhendo no pergaminho 2x2 | false = posicionando no grid
+    private boolean menuPergaminhoAberto;
     private int larguraPergaminhoAtual;
 
     private List<OpcaoPeca> opcoesSorteadas;
@@ -75,7 +81,7 @@ public class FaseConstrucao {
         this.opcoesSorteadas = new ArrayList<>();
     }
 
-    // Sorteia sempre 2 pisáveis e 2 letais e abre o pergaminho animado em 2x2
+    // Sorteia sempre 2 pisaveis e 2 letais (dimensoes multiplas exatas de 20px)
     public void iniciar() {
         this.ativa = true;
         this.menuPergaminhoAberto = true;
@@ -83,13 +89,13 @@ public class FaseConstrucao {
         this.opcoesSorteadas.clear();
 
         List<OpcaoPeca> pisaveis = new ArrayList<>();
-        pisaveis.add(new OpcaoPeca("Tabua Madeira", false, 120, 20, "MADEIRA"));
-        pisaveis.add(new OpcaoPeca("Degrau Curto", false, 80, 20, "DEGRAU"));
+        pisaveis.add(new OpcaoPeca("Tabua Madeira", false, 120, 20, "MADEIRA")); // 6x1 quadradinhos
+        pisaveis.add(new OpcaoPeca("Degrau Curto", false, 80, 20, "DEGRAU"));    // 4x1 quadradinhos
         Collections.shuffle(pisaveis);
 
         List<OpcaoPeca> letais = new ArrayList<>();
-        letais.add(new OpcaoPeca("Espinhos", true, 80, 20, "ESPINHO"));
-        letais.add(new OpcaoPeca("Flecha", true, 40, 20, "FLECHA_SOLTA"));
+        letais.add(new OpcaoPeca("Espinhos", true, 80, 20, "ESPINHO"));         // 4x1 quadradinhos
+        letais.add(new OpcaoPeca("Flecha", true, 40, 20, "FLECHA_SOLTA"));     // 2x1 quadradinhos
         Collections.shuffle(letais);
 
         opcoesSorteadas.add(pisaveis.get(0));
@@ -100,14 +106,14 @@ public class FaseConstrucao {
 
         indiceP1 = 0;
         escolheuCartaP1 = false;
-        cursorXP1 = 240;
-        cursorYP1 = 280;
+        cursorXP1 = 440;
+        cursorYP1 = 360;
         confirmouPosicaoP1 = false;
 
         indiceP2 = 1;
         escolheuCartaP2 = false;
-        cursorXP2 = 440;
-        cursorYP2 = 280;
+        cursorXP2 = 720;
+        cursorYP2 = 360;
         confirmouPosicaoP2 = false;
     }
 
@@ -118,7 +124,7 @@ public class FaseConstrucao {
     public void atualizarAnimacao() {
         if (!ativa) return;
         if (menuPergaminhoAberto && larguraPergaminhoAtual < LARGURA_PERGAMINHO_MAX) {
-            larguraPergaminhoAtual += 32;
+            larguraPergaminhoAtual += 36;
             if (larguraPergaminhoAtual > LARGURA_PERGAMINHO_MAX) {
                 larguraPergaminhoAtual = LARGURA_PERGAMINHO_MAX;
             }
@@ -147,7 +153,7 @@ public class FaseConstrucao {
     }
 
     public boolean posicaoValida(int x, int y, OpcaoPeca opcao, List<ElementoJogo> pecasDoMapa) {
-        if (x < 40 || y < 80 || x + opcao.largura > 760 || y + opcao.altura > 560) {
+        if (x < MIN_X || y < MIN_Y || x + opcao.largura > MAX_X || y + opcao.altura > MAX_Y) {
             return false;
         }
         Rectangle candidato = new Rectangle(x, y, opcao.largura, opcao.altura);
@@ -165,9 +171,6 @@ public class FaseConstrucao {
         }
     }
 
-    // Controles Player 1:
-    // - No pergaminho 2x2: A/D navega entre as 4 opções, N confirma a escolha da peça
-    // - No quadriculado: W sobe, S desce, A esquerda, D direita, N confirma a posição
     public void acaoP1(String comando, List<ElementoJogo> pecasDoMapa) {
         if (!ativa) return;
 
@@ -180,8 +183,8 @@ public class FaseConstrucao {
             } else if ("CONFIRMAR".equals(comando)) {
                 escolheuCartaP1 = true;
                 OpcaoPeca op = opcoesSorteadas.get(indiceP1);
-                cursorXP1 = ajustarNaGrade(cursorXP1, 40, 760 - op.largura);
-                cursorYP1 = ajustarNaGrade(cursorYP1, 80, 560 - op.altura);
+                cursorXP1 = ajustarNaGrade(cursorXP1, MIN_X, MAX_X - op.largura);
+                cursorYP1 = ajustarNaGrade(cursorYP1, MIN_Y, MAX_Y - op.altura);
                 verificarSaidaDoPergaminho();
             }
             return;
@@ -192,16 +195,16 @@ public class FaseConstrucao {
 
         switch (comando) {
             case "CIMA":
-                cursorYP1 = ajustarNaGrade(cursorYP1 - TAM_GRADE, 80, 560 - atual.altura);
+                cursorYP1 = ajustarNaGrade(cursorYP1 - TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
                 break;
             case "BAIXO":
-                cursorYP1 = ajustarNaGrade(cursorYP1 + TAM_GRADE, 80, 560 - atual.altura);
+                cursorYP1 = ajustarNaGrade(cursorYP1 + TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
                 break;
             case "ESQ":
-                cursorXP1 = ajustarNaGrade(cursorXP1 - TAM_GRADE, 40, 760 - atual.largura);
+                cursorXP1 = ajustarNaGrade(cursorXP1 - TAM_GRADE, MIN_X, MAX_X - atual.largura);
                 break;
             case "DIR":
-                cursorXP1 = ajustarNaGrade(cursorXP1 + TAM_GRADE, 40, 760 - atual.largura);
+                cursorXP1 = ajustarNaGrade(cursorXP1 + TAM_GRADE, MIN_X, MAX_X - atual.largura);
                 break;
             case "CONFIRMAR":
                 if (posicaoValida(cursorXP1, cursorYP1, atual, pecasDoMapa)) {
@@ -211,9 +214,6 @@ public class FaseConstrucao {
         }
     }
 
-    // Controles Player 2:
-    // - No pergaminho 2x2: Esquerda/Direita navega entre as 4 opções, M confirma a escolha da peça
-    // - No quadriculado: Seta Cima sobe, Seta Baixo desce, Esquerda/Direita move, M confirma a posição
     public void acaoP2(String comando, List<ElementoJogo> pecasDoMapa) {
         if (!ativa) return;
 
@@ -226,8 +226,8 @@ public class FaseConstrucao {
             } else if ("CONFIRMAR".equals(comando)) {
                 escolheuCartaP2 = true;
                 OpcaoPeca op = opcoesSorteadas.get(indiceP2);
-                cursorXP2 = ajustarNaGrade(cursorXP2, 40, 760 - op.largura);
-                cursorYP2 = ajustarNaGrade(cursorYP2, 80, 560 - op.altura);
+                cursorXP2 = ajustarNaGrade(cursorXP2, MIN_X, MAX_X - op.largura);
+                cursorYP2 = ajustarNaGrade(cursorYP2, MIN_Y, MAX_Y - op.altura);
                 verificarSaidaDoPergaminho();
             }
             return;
@@ -238,16 +238,16 @@ public class FaseConstrucao {
 
         switch (comando) {
             case "CIMA":
-                cursorYP2 = ajustarNaGrade(cursorYP2 - TAM_GRADE, 80, 560 - atual.altura);
+                cursorYP2 = ajustarNaGrade(cursorYP2 - TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
                 break;
             case "BAIXO":
-                cursorYP2 = ajustarNaGrade(cursorYP2 + TAM_GRADE, 80, 560 - atual.altura);
+                cursorYP2 = ajustarNaGrade(cursorYP2 + TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
                 break;
             case "ESQ":
-                cursorXP2 = ajustarNaGrade(cursorXP2 - TAM_GRADE, 40, 760 - atual.largura);
+                cursorXP2 = ajustarNaGrade(cursorXP2 - TAM_GRADE, MIN_X, MAX_X - atual.largura);
                 break;
             case "DIR":
-                cursorXP2 = ajustarNaGrade(cursorXP2 + TAM_GRADE, 40, 760 - atual.largura);
+                cursorXP2 = ajustarNaGrade(cursorXP2 + TAM_GRADE, MIN_X, MAX_X - atual.largura);
                 break;
             case "CONFIRMAR":
                 if (posicaoValida(cursorXP2, cursorYP2, atual, pecasDoMapa)) {
@@ -265,30 +265,29 @@ public class FaseConstrucao {
             return;
         }
 
-        // 1. Fundo quadriculado na área livre
-        g2d.setColor(new Color(70, 85, 105, 95));
+        // 1. Quadriculado pequeno (20x20) preenchendo a area de construcao
+        g2d.setColor(new Color(85, 105, 130, 85));
         g2d.setStroke(new BasicStroke(1));
-        for (int x = 40; x <= 760; x += TAM_GRADE) {
-            g2d.drawLine(x, 80, x, 560);
+        for (int x = MIN_X; x <= MAX_X; x += TAM_GRADE) {
+            g2d.drawLine(x, MIN_Y, x, MAX_Y);
         }
-        for (int y = 80; y <= 560; y += TAM_GRADE) {
-            g2d.drawLine(40, y, 760, y);
+        for (int y = MIN_Y; y <= MAX_Y; y += TAM_GRADE) {
+            g2d.drawLine(MIN_X, y, MAX_X, y);
         }
 
-        // 2. Previews das peças em posicionamento
+        // 2. Previews cobrindo os quadradinhos exatos
         desenharPreview(g2d, cursorXP1, cursorYP1, opcoesSorteadas.get(indiceP1), Color.RED, confirmouPosicaoP1, pecasDoMapa, "P1 [N]");
         desenharPreview(g2d, cursorXP2, cursorYP2, opcoesSorteadas.get(indiceP2), Color.CYAN, confirmouPosicaoP2, pecasDoMapa, "P2 [M]");
     }
 
     private void desenharPergaminho2x2(Graphics2D g2d) {
         g2d.setColor(new Color(0, 0, 0, 165));
-        g2d.fillRect(0, 0, 800, 600);
+        g2d.fillRect(0, 0, 1280, 720);
 
-        int centroX = 400;
+        int centroX = 640;
         int xEsquerda = centroX - (larguraPergaminhoAtual / 2);
-        int yTopo = 125;
+        int yTopo = 160;
 
-        // Corpo do pergaminho
         g2d.setColor(new Color(238, 214, 175));
         g2d.fillRoundRect(xEsquerda, yTopo, larguraPergaminhoAtual, ALTURA_PERGAMINHO, 15, 15);
 
@@ -296,7 +295,6 @@ public class FaseConstrucao {
         g2d.setStroke(new BasicStroke(3));
         g2d.drawRoundRect(xEsquerda + 8, yTopo + 8, Math.max(1, larguraPergaminhoAtual - 16), ALTURA_PERGAMINHO - 16, 10, 10);
 
-        // Rolos laterais de madeira
         g2d.setColor(new Color(101, 55, 24));
         g2d.fillRoundRect(xEsquerda - 12, yTopo - 15, 22, ALTURA_PERGAMINHO + 30, 10, 10);
         g2d.fillRoundRect(xEsquerda + larguraPergaminhoAtual - 10, yTopo - 15, 22, ALTURA_PERGAMINHO + 30, 10, 10);
@@ -309,20 +307,19 @@ public class FaseConstrucao {
 
         if (larguraPergaminhoAtual >= LARGURA_PERGAMINHO_MAX - 50) {
             g2d.setColor(new Color(70, 40, 15));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 22));
-            g2d.drawString("ESCOLHA SUA PECA (2x2)", 275, yTopo + 40);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 24));
+            g2d.drawString("ESCOLHA SUA PECA (2x2)", 490, yTopo + 42);
 
-            // Grid 2x2 de opções desenhadas
-            int slotW = 210;
-            int slotH = 92;
-            int inicioX = 180;
-            int inicioY = yTopo + 62;
+            int slotW = 240;
+            int slotH = 98;
+            int inicioX = 390;
+            int inicioY = yTopo + 66;
 
             for (int i = 0; i < opcoesSorteadas.size(); i++) {
                 int col = i % 2;
                 int row = i / 2;
                 int sx = inicioX + col * (slotW + 20);
-                int sy = inicioY + row * (slotH + 14);
+                int sy = inicioY + row * (slotH + 16);
 
                 OpcaoPeca op = opcoesSorteadas.get(i);
 
@@ -333,20 +330,17 @@ public class FaseConstrucao {
                 g2d.setColor(new Color(120, 80, 40));
                 g2d.drawRoundRect(sx, sy, slotW, slotH, 10, 10);
 
-                // Desenha a peça real centralizada dentro do quadrante 2x2
-                ElementoJogo modeloDesenho = op.criarElemento(0, 0);
-                int drawW = Math.min(modeloDesenho.getLargura(), 110);
-                int drawH = Math.min(modeloDesenho.getAltura(), 24);
+                int drawW = Math.min(op.largura, 120);
+                int drawH = Math.min(op.altura, 20);
                 int drawX = sx + (slotW - drawW) / 2;
-                int drawY = sy + 28 + (28 - drawH) / 2;
+                int drawY = sy + 42;
 
                 ElementoJogo visual = op.criarElemento(drawX, drawY);
                 visual.desenhar(g2d);
 
-                // Nome curto e indicador de seleção P1 / P2
                 g2d.setColor(new Color(65, 35, 10));
                 g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
-                g2d.drawString(op.nome, sx + 10, sy + 18);
+                g2d.drawString(op.nome, sx + 10, sy + 20);
 
                 String sel = "";
                 if (i == indiceP1) sel += escolheuCartaP1 ? "P1[OK] " : "P1 ";
@@ -358,8 +352,8 @@ public class FaseConstrucao {
             }
 
             g2d.setColor(new Color(80, 45, 15));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 13));
-            g2d.drawString("P1: A/D + [N] confirmar   |   P2: Esq/Dir + [M] confirmar", 205, yTopo + ALTURA_PERGAMINHO - 16);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g2d.drawString("P1: A/D + [N] confirmar   |   P2: Esq/Dir + [M] confirmar", 425, yTopo + ALTURA_PERGAMINHO - 16);
         }
     }
 
@@ -367,8 +361,8 @@ public class FaseConstrucao {
                                  boolean confirmado, List<ElementoJogo> pecasDoMapa, String rotulo) {
         boolean valido = posicaoValida(x, y, op, pecasDoMapa);
         Color preenchimento = confirmado
-            ? new Color(50, 200, 90, 130)
-            : (valido ? new Color(255, 255, 255, 75) : new Color(220, 40, 40, 110));
+            ? new Color(50, 200, 90, 135)
+            : (valido ? new Color(255, 255, 255, 85) : new Color(220, 40, 40, 120));
 
         g2d.setColor(preenchimento);
         g2d.fillRect(x, y, op.largura, op.altura);
@@ -378,6 +372,6 @@ public class FaseConstrucao {
         g2d.drawRect(x, y, op.largura, op.altura);
 
         g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2d.drawString(rotulo + (confirmado ? " (OK)" : (valido ? "" : " [BLOQUEADO]")), x + 4, y - 4);
+        g2d.drawString(rotulo + (confirmado ? " (OK)" : (valido ? "" : " [BLOQUEADO]")), x + 2, y - 4);
     }
 }
