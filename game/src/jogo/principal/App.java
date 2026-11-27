@@ -1,5 +1,6 @@
 package jogo.principal;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -29,15 +30,20 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
     private static final int LARGURA_PALCO = 1280;
     private static final int ALTURA_PALCO = 720;
 
-    private Jogador player1;
-    private Jogador player2;
-    private List<ElementoJogo> pecasDoMapa;
-    private PergaminhoPlacar pergaminho;
-    private FaseConstrucao faseConstrucao;
-    private Timer loopJogo;
+    private final Jogador player1;
+    private final Jogador player2;
+    private final List<ElementoJogo> pecasDoMapa;
+    private final PergaminhoPlacar pergaminho;
+    private final FaseConstrucao faseConstrucao;
+    private final Timer loopJogo;
 
     private boolean naTelaInicial = true;
+    private boolean telaVitoria = false;
+    private String textoVencedor = "";
+    private Color corVencedor = Color.YELLOW;
+
     private final Rectangle botaoJogar = new Rectangle(550, 380, 180, 56);
+    private final Rectangle botaoJogarNovamente = new Rectangle(515, 450, 250, 56);
 
     private boolean p1Esquerda = false;
     private boolean p1Direita = false;
@@ -47,7 +53,6 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
     private final int P1_X_INICIAL = 60;
     private final int P2_X_INICIAL = 105;
-    private final int Y_INICIAL = 480;
 
     public App() {
         this.setBackground(Color.BLACK);
@@ -55,8 +60,8 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         this.addKeyListener(this);
         this.addMouseListener(this);
 
-        this.player1 = new Jogador(P1_X_INICIAL, Y_INICIAL, Color.RED);
-        this.player2 = new Jogador(P2_X_INICIAL, Y_INICIAL, Color.BLUE);
+        this.player1 = new Jogador(P1_X_INICIAL, 480, Color.RED);
+        this.player2 = new Jogador(P2_X_INICIAL, 480, Color.BLUE);
         this.pergaminho = new PergaminhoPlacar();
         this.faseConstrucao = new FaseConstrucao();
         this.pecasDoMapa = new ArrayList<>();
@@ -77,10 +82,38 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
     private void iniciarPartida() {
         naTelaInicial = false;
+        telaVitoria = false;
         this.faseConstrucao.iniciar();
     }
 
-    // Mapa limpo: apenas plataforma inicial a esquerda e plataforma final bem distante a direita
+    private void abrirTelaVitoria() {
+        int p1 = pergaminho.getPontosP1();
+        int p2 = pergaminho.getPontosP2();
+
+        if (p1 >= 4 && p2 >= 4) {
+            textoVencedor = "EMPATE! AMBOS COMPLETARAM 4/4!";
+            corVencedor = Color.ORANGE;
+        } else if (p1 >= 4) {
+            textoVencedor = "PLAYER 1 (VERMELHO) COMPLETOU AS 4 VITORIAS!";
+            corVencedor = new Color(235, 70, 70);
+        } else {
+            textoVencedor = "PLAYER 2 (AZUL) COMPLETOU AS 4 VITORIAS!";
+            corVencedor = new Color(70, 145, 255);
+        }
+
+        pergaminho.avancarRound();
+        telaVitoria = true;
+    }
+
+    private void reiniciarPartidaCompleta() {
+        telaVitoria = false;
+        pergaminho.resetarPartida();
+        montarCenarioBase();
+        player1.resetarParaNovoRound(P1_X_INICIAL);
+        player2.resetarParaNovoRound(P2_X_INICIAL);
+        faseConstrucao.iniciar();
+    }
+
     private void montarCenarioBase() {
         pecasDoMapa.clear();
         pecasDoMapa.add(new Plataforma(20, 520, 160, 200, Color.DARK_GRAY, "CHAO"));
@@ -98,22 +131,74 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
     private void processarJogador(Jogador jogador, boolean esq, boolean dir) {
         if (jogador.isVenceuNoRound() || jogador.isMorreuNoRound()) return;
 
-        if (esq) jogador.moverEsquerda();
-        if (dir) jogador.moverDireita();
-        jogador.aplicarGravidade();
-
-        if (jogador.getY() > ALTURA_PALCO) {
-            jogador.morrer();
+        // 1. Movimento horizontal e colisao lateral antes da gravidade
+        if (esq && !dir) {
+            jogador.moverEsquerda();
+        } else if (dir && !esq) {
+            jogador.moverDireita();
         }
 
+        for (ElementoJogo peca : pecasDoMapa) {
+            if (!(peca instanceof Plataforma) && !(peca instanceof Armadilha)) continue;
+            if (jogador.getLimites().intersects(peca.getLimites())) {
+                if (peca instanceof Armadilha arm && !"LANCA_CHAMAS".equals(arm.getTipo()) && !"SERRA_TRILHO".equals(arm.getTipo())) {
+                    peca.aoColidir(jogador);
+                    if (jogador.isMorreuNoRound()) return;
+                }
+            }
+        }
+
+        // 2. Gravidade e movimento vertical
+        jogador.aplicarGravidade();
+        if (jogador.isMorreuNoRound()) return;
+
+        // 3. Colisoes gerais (plataformas, molas, escadas, armadilhas, chegada)
         for (ElementoJogo peca : pecasDoMapa) {
             if (jogador.getLimites().intersects(peca.getLimites())) {
                 peca.aoColidir(jogador);
                 if (jogador.isVenceuNoRound() || jogador.isMorreuNoRound()) {
-                    break;
+                    return;
                 }
             }
         }
+
+        // 4. Consome o pulo ja sabendo com precisao se o jogador esta apoiado no chao
+        jogador.consumirPulo();
+    }
+
+    private void desenharTelaVitoria(Graphics2D g2d) {
+        g2d.setColor(new Color(15, 18, 26));
+        g2d.fillRect(0, 0, LARGURA_PALCO, ALTURA_PALCO);
+
+        g2d.setColor(corVencedor);
+        g2d.setStroke(new BasicStroke(4));
+        g2d.drawRoundRect(220, 130, 840, 430, 24, 24);
+
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 42));
+        g2d.drawString("TELA DE VITORIA", 460, 205);
+
+        g2d.setColor(Color.WHITE);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 26));
+        g2d.drawString(textoVencedor, 315, 275);
+
+        g2d.setColor(Color.LIGHT_GRAY);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 22));
+        g2d.drawString(
+            "Placar Final  |  Player 1: " + pergaminho.getPontosP1() + "/4   -   Player 2: " + pergaminho.getPontosP2() + "/4",
+            390, 355
+        );
+
+        g2d.setColor(new Color(46, 160, 67));
+        g2d.fillRoundRect(botaoJogarNovamente.x, botaoJogarNovamente.y, botaoJogarNovamente.width, botaoJogarNovamente.height, 14, 14);
+        g2d.setColor(Color.WHITE);
+        g2d.setStroke(new BasicStroke(2));
+        g2d.drawRoundRect(botaoJogarNovamente.x, botaoJogarNovamente.y, botaoJogarNovamente.width, botaoJogarNovamente.height, 14, 14);
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 20));
+        g2d.drawString("JOGAR NOVAMENTE", botaoJogarNovamente.x + 24, botaoJogarNovamente.y + 35);
+
+        g2d.setColor(Color.GRAY);
+        g2d.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        g2d.drawString("Pressione [ESPACO] ou [ENTER] para reiniciar  |  [ESC] para sair", 415, 535);
     }
 
     @Override
@@ -141,9 +226,16 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             return;
         }
 
+        if (telaVitoria) {
+            desenharTelaVitoria(g2d);
+            return;
+        }
+
         for (ElementoJogo peca : pecasDoMapa) {
             peca.desenhar(g2d);
         }
+
+        faseConstrucao.desenharExplosoes(g2d);
 
         if (!player1.isMorreuNoRound()) {
             player1.desenhar(g2d);
@@ -176,7 +268,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (naTelaInicial) {
+        if (naTelaInicial || telaVitoria) {
             repaint();
             return;
         }
@@ -194,9 +286,15 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             return;
         }
 
+        if (faseConstrucao.temExplosaoAtiva()) {
+            faseConstrucao.atualizarExplosoes();
+        }
+
         for (ElementoJogo peca : pecasDoMapa) {
-            if (peca instanceof Armadilha) {
-                ((Armadilha) peca).atualizar(pecasDoMapa);
+            if (peca instanceof Armadilha armadilha) {
+                armadilha.atualizar(pecasDoMapa);
+            } else if (peca instanceof Plataforma plataforma) {
+                plataforma.atualizar();
             }
         }
 
@@ -231,12 +329,23 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             return;
         }
 
+        if (telaVitoria) {
+            if (tecla == KeyEvent.VK_ENTER || tecla == KeyEvent.VK_SPACE) {
+                reiniciarPartidaCompleta();
+            }
+            return;
+        }
+
         if (pergaminho.isAberto()) {
             if (tecla == KeyEvent.VK_SPACE || tecla == KeyEvent.VK_ENTER) {
-                pergaminho.avancarRound();
-                player1.resetarParaNovoRound(P1_X_INICIAL);
-                player2.resetarParaNovoRound(P2_X_INICIAL);
-                faseConstrucao.iniciar();
+                if (pergaminho.partidaFinalizada()) {
+                    abrirTelaVitoria();
+                } else {
+                    pergaminho.avancarRound();
+                    player1.resetarParaNovoRound(P1_X_INICIAL);
+                    player2.resetarParaNovoRound(P2_X_INICIAL);
+                    faseConstrucao.iniciar();
+                }
             }
             return;
         }
@@ -258,11 +367,11 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
         if (tecla == KeyEvent.VK_A) p1Esquerda = true;
         if (tecla == KeyEvent.VK_D) p1Direita = true;
-        if (tecla == KeyEvent.VK_W) player1.pular();
+        if (tecla == KeyEvent.VK_W) player1.solicitarPulo();
 
         if (tecla == KeyEvent.VK_LEFT)  p2Esquerda = true;
         if (tecla == KeyEvent.VK_RIGHT) p2Direita = true;
-        if (tecla == KeyEvent.VK_UP)    player2.pular();
+        if (tecla == KeyEvent.VK_UP)    player2.solicitarPulo();
     }
 
     @Override
@@ -280,13 +389,13 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
     @Override
     public void mousePressed(MouseEvent e) {
-        if (!naTelaInicial) return;
-
         int mx = (int) (e.getX() / getEscalaX());
         int my = (int) (e.getY() / getEscalaY());
 
-        if (botaoJogar.contains(mx, my)) {
+        if (naTelaInicial && botaoJogar.contains(mx, my)) {
             iniciarPartida();
+        } else if (telaVitoria && botaoJogarNovamente.contains(mx, my)) {
+            reiniciarPartidaCompleta();
         }
     }
 

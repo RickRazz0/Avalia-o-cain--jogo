@@ -6,10 +6,11 @@ import jogo.base.ElementoJogo;
 
 public class Jogador extends ElementoJogo {
 
-    private int velocidadeX;
+    private final int velocidadeX;
     private int velocidadeY;
     private boolean noChao;
-    private Color cor;
+    private boolean solicitouPulo;
+    private final Color cor;
 
     private boolean morreuNoRound;
     private boolean venceuNoRound;
@@ -19,9 +20,24 @@ public class Jogador extends ElementoJogo {
         this.velocidadeX = 4;
         this.velocidadeY = 0;
         this.noChao = false;
+        this.solicitouPulo = false;
         this.cor = cor;
         this.morreuNoRound = false;
         this.venceuNoRound = false;
+    }
+
+    public void solicitarPulo() {
+        this.solicitouPulo = true;
+    }
+
+    public void consumirPulo() {
+        if (solicitouPulo) {
+            if (noChao) {
+                velocidadeY = -14;
+                noChao = false;
+            }
+            solicitouPulo = false;
+        }
     }
 
     public void aplicarGravidade() {
@@ -33,7 +49,7 @@ public class Jogador extends ElementoJogo {
         setY(getY() + velocidadeY);
         noChao = false;
 
-        if (getY() > 600) {
+        if (getY() > 720) {
             morrer();
         }
     }
@@ -61,9 +77,10 @@ public class Jogador extends ElementoJogo {
 
     public void resetarParaNovoRound(int xInicial) {
         setX(xInicial);
-        setY(350);
+        setY(480);
         velocidadeY = 0;
         noChao = false;
+        solicitouPulo = false;
         morreuNoRound = false;
         venceuNoRound = false;
     }
