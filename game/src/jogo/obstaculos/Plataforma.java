@@ -8,8 +8,10 @@ import java.awt.Rectangle;
 import jogo.base.ElementoJogo;
 import jogo.jogadores.Jogador;
 
+// [HERANÇA]: especializa ElementoJogo como superfície sólida e seus tipos especiais.
 public class Plataforma extends ElementoJogo {
 
+    // [ENCAPSULAMENTO]: configuração visual e estados de animação pertencem à plataforma.
     private final Color cor;
     private final String tipo; // "CHAO", "MADEIRA", "MADEIRINHA", "DEGRAU", "ESCADARIA", "MOLA", "QUEBRADICA"
 
@@ -39,6 +41,7 @@ public class Plataforma extends ElementoJogo {
         return tipo;
     }
 
+    // [ENCAPSULAMENTO]: avança as animações e o temporizador da plataforma quebradiça por frame.
     public void atualizar() {
         if ("MOLA".equals(tipo) && animacaoMolaFrames > 0) {
             animacaoMolaFrames--;
@@ -162,6 +165,7 @@ public class Plataforma extends ElementoJogo {
         g.drawLine(bordaQuebrada + lado * 3, y + h / 2, bordaQuebrada, y + h - 2);
     }
 
+    // [POLIMORFISMO]: escolhe a aparência pelo tipo concreto da mesma classe Plataforma.
     @Override
     public void desenhar(Graphics g) {
         if ("MOLA".equals(tipo)) {
@@ -195,6 +199,7 @@ public class Plataforma extends ElementoJogo {
         g.drawRect(getX(), getY(), getLargura(), getAltura());
     }
 
+    // [POLIMORFISMO]: resolve a colisão de acordo com mola, escada, quebradiça ou sólido normal.
     @Override
     public void aoColidir(Jogador jogador) {
         if ("MOLA".equals(tipo)) {

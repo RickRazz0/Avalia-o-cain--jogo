@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 
+// [ENCAPSULAMENTO]: concentra pontuação, estado do round e animação do placar.
 public class PergaminhoPlacar {
 
     private boolean aberto;
@@ -62,6 +63,7 @@ public class PergaminhoPlacar {
         larguraAtual = 0;
     }
 
+    // [ENCAPSULAMENTO]: avança a abertura do pergaminho até a largura máxima.
     public void atualizarAnimacao() {
         if (!aberto) return;
 

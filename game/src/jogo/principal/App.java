@@ -25,6 +25,7 @@ import jogo.obstaculos.Plataforma;
 import jogo.ui.FaseConstrucao;
 import jogo.ui.PergaminhoPlacar;
 
+// [HERANÇA]: JPanel fornece a área gráfica; as interfaces recebem timer, teclado e mouse.
 public class App extends JPanel implements ActionListener, KeyListener, MouseListener {
 
     private static final int LARGURA_PALCO = 1280;
@@ -32,6 +33,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
     private final Jogador player1;
     private final Jogador player2;
+    // [COLLECTIONS]: uma lista polimórfica armazena qualquer peça existente no cenário.
     private final List<ElementoJogo> pecasDoMapa;
     private final PergaminhoPlacar pergaminho;
     private final FaseConstrucao faseConstrucao;
@@ -136,6 +138,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         }
     }
 
+    // [POLIMORFISMO]: processa colisões chamando aoColidir no ElementoJogo real da lista.
     private void processarJogador(Jogador jogador, boolean esq, boolean dir) {
         if (jogador.isVenceuNoRound() || jogador.isMorreuNoRound()) return;
 
@@ -226,6 +229,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         g2d.drawString("Pressione [ESPACO] ou [ENTER] para reiniciar  |  [ESC] para sair", 415, 535);
     }
 
+    // [POLIMORFISMO]: ciclo de renderização do Swing para todas as telas do jogo.
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -291,6 +295,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         pergaminho.desenhar(g2d);
     }
 
+    // [COLLECTIONS]: o Timer atualiza cada elemento da lista a cada frame.
     @Override
     public void actionPerformed(ActionEvent e) {
         if (naTelaInicial || telaVitoria) {

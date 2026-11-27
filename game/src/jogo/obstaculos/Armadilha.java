@@ -8,8 +8,10 @@ import java.util.List;
 import jogo.base.ElementoJogo;
 import jogo.jogadores.Jogador;
 
+// [HERANÇA]: armadilha é um ElementoJogo letal com comportamento escolhido por tipo.
 public class Armadilha extends ElementoJogo {
 
+    // [ENCAPSULAMENTO]: velocidades, ciclo de fogo e rotação são controlados pela própria armadilha.
     private final int velocidadeX;
     private final int velocidadeY;
     private final int xInicial;
@@ -105,6 +107,7 @@ public class Armadilha extends ElementoJogo {
         return false;
     }
 
+    // [COLLECTIONS]: consulta e pode adicionar/remover elementos da lista dinâmica do cenário.
     public void atualizar(List<ElementoJogo> pecasDoMapa) {
         if ("BESTA".equals(tipo)) {
             contadorDisparoBesta++;
@@ -260,6 +263,7 @@ public class Armadilha extends ElementoJogo {
         }
     }
 
+    // [POLIMORFISMO]: desenha serra, fogo, flecha, besta ou espinho sem o App conhecer detalhes.
     @Override
     public void desenhar(Graphics g) {
         if ("BESTA".equals(tipo)) {
@@ -332,6 +336,7 @@ public class Armadilha extends ElementoJogo {
         g2d.dispose();
     }
 
+    // [POLIMORFISMO]: cada tipo de armadilha aplica dano ou colisão sólida própria.
     @Override
     public void aoColidir(Jogador jogador) {
         if ("LANCA_CHAMAS".equals(tipo)) {

@@ -6,6 +6,7 @@ import jogo.base.ElementoJogo;
 import jogo.jogadores.Jogador;
 
 // HERANÇA: Arco também estende ElementoJogo[cite: 4, 6]
+// [HERANÇA]: objeto sólido legado que também pode participar do cenário.
 public class Arco extends ElementoJogo {
 
     public Arco(int x, int y) {
@@ -13,6 +14,7 @@ public class Arco extends ElementoJogo {
     }
 
     // POLIMORFISMO: Desenha o formato de arco/besta virado para a esquerda (igual ao seu rascunho!)[cite: 4, 6]
+    // [POLIMORFISMO]: desenho específico do arco.
     @Override
     public void desenhar(Graphics g) {
         g.setColor(Color.ORANGE);

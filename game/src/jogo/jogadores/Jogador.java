@@ -4,8 +4,10 @@ import java.awt.Color;
 import java.awt.Graphics;
 import jogo.base.ElementoJogo;
 
+// [HERANÇA]: jogador é um ElementoJogo com física, entrada e estado de round.
 public class Jogador extends ElementoJogo {
 
+    // [ENCAPSULAMENTO]: estado privado evita que outras classes alterem a física sem regras.
     private final int velocidadeX;
     private int velocidadeY;
     private boolean noChao;
@@ -26,6 +28,7 @@ public class Jogador extends ElementoJogo {
         this.venceuNoRound = false;
     }
 
+    // [ENCAPSULAMENTO]: registra a intenção; o salto é aplicado somente após as colisões.
     public void solicitarPulo() {
         this.solicitouPulo = true;
     }
@@ -40,6 +43,7 @@ public class Jogador extends ElementoJogo {
         }
     }
 
+    // [ENCAPSULAMENTO]: integra a velocidade vertical e limita a queda máxima por frame.
     public void aplicarGravidade() {
         if (venceuNoRound || morreuNoRound) return;
 
@@ -91,6 +95,7 @@ public class Jogador extends ElementoJogo {
     public boolean isMorreuNoRound() { return morreuNoRound; }
     public boolean isVenceuNoRound() { return venceuNoRound; }
 
+    // [POLIMORFISMO]: implementação visual concreta do contrato de ElementoJogo.
     @Override
     public void desenhar(Graphics g) {
         g.setColor(cor);

@@ -13,8 +13,10 @@ import jogo.base.ElementoJogo;
 import jogo.obstaculos.Armadilha;
 import jogo.obstaculos.Plataforma;
 
+// [COLLECTIONS]: coordena a lista de peças já colocadas e as opções sorteadas.
 public class FaseConstrucao {
 
+    // [ABSTRAÇÃO]: descreve uma carta do catálogo sem depender da classe concreta criada depois.
     public static class OpcaoPeca {
         public final String nome;
         public final boolean letal;
@@ -124,6 +126,7 @@ public class FaseConstrucao {
     private boolean menuPergaminhoAberto;
     private int larguraPergaminhoAtual;
 
+    // [COLLECTIONS]: listas dinâmicas guardam cartas disponíveis e explosões em andamento.
     private final List<OpcaoPeca> opcoesSorteadas;
     private final List<ExplosaoAnimacao> explosoesAtivas;
 
@@ -149,6 +152,7 @@ public class FaseConstrucao {
         this.explosoesAtivas = new ArrayList<>();
     }
 
+    // [COLLECTIONS]: monta, embaralha e seleciona quatro opções do catálogo.
     public void iniciar() {
         this.ativa = true;
         this.menuPergaminhoAberto = true;
@@ -281,6 +285,7 @@ public class FaseConstrucao {
         return rotacao % 2 == 0 ? opcao.altura : opcao.largura;
     }
 
+    // [ENCAPSULAMENTO]: centraliza as regras de limites, áreas protegidas e sobreposição.
     public boolean posicaoValida(int x, int y, OpcaoPeca opcao, int rotacao, List<ElementoJogo> pecasDoMapa) {
         int largura = larguraRotacionada(opcao, rotacao);
         int altura = alturaRotacionada(opcao, rotacao);
@@ -380,6 +385,7 @@ public class FaseConstrucao {
         }
     }
 
+    // [POLIMORFISMO]: desenha previews sem conhecer a subclasse final de cada peça.
     public void desenhar(Graphics2D g2d, List<ElementoJogo> pecasDoMapa) {
         if (!ativa) return;
 
