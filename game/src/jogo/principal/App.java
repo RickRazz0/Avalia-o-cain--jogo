@@ -128,6 +128,14 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         p2Direita = false;
     }
 
+    private void resetarPlataformasDoRound() {
+        for (ElementoJogo peca : pecasDoMapa) {
+            if (peca instanceof Plataforma plataforma) {
+                plataforma.resetarParaNovoRound();
+            }
+        }
+    }
+
     private void processarJogador(Jogador jogador, boolean esq, boolean dir) {
         if (jogador.isVenceuNoRound() || jogador.isMorreuNoRound()) return;
 
@@ -137,6 +145,8 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         } else if (dir && !esq) {
             jogador.moverDireita();
         }
+
+        if (verificarJatosDeFogo(jogador)) return;
 
         for (ElementoJogo peca : pecasDoMapa) {
             if (!(peca instanceof Plataforma) && !(peca instanceof Armadilha)) continue;
@@ -152,6 +162,8 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
         jogador.aplicarGravidade();
         if (jogador.isMorreuNoRound()) return;
 
+        if (verificarJatosDeFogo(jogador)) return;
+
         // 3. Colisoes gerais (plataformas, molas, escadas, armadilhas, chegada)
         for (ElementoJogo peca : pecasDoMapa) {
             if (jogador.getLimites().intersects(peca.getLimites())) {
@@ -164,6 +176,16 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
         // 4. Consome o pulo ja sabendo com precisao se o jogador esta apoiado no chao
         jogador.consumirPulo();
+    }
+
+    private boolean verificarJatosDeFogo(Jogador jogador) {
+        for (ElementoJogo peca : pecasDoMapa) {
+            if (peca instanceof Armadilha armadilha
+                    && armadilha.causarDanoSeAtingirPeloJato(jogador)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void desenharTelaVitoria(Graphics2D g2d) {
@@ -344,6 +366,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
                     pergaminho.avancarRound();
                     player1.resetarParaNovoRound(P1_X_INICIAL);
                     player2.resetarParaNovoRound(P2_X_INICIAL);
+                    resetarPlataformasDoRound();
                     faseConstrucao.iniciar();
                 }
             }

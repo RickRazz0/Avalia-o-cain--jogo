@@ -36,7 +36,9 @@ public class FaseConstrucao {
             return switch (chaveTipo) {
                 case "MADEIRINHA" -> new Plataforma(x, y, largura, altura, new Color(165, 92, 35), "MADEIRINHA");
                 case "ESCADARIA" -> new Plataforma(x, y, largura, altura, Color.GRAY, "ESCADARIA");
+                case "DEGRAU" -> new Plataforma(x, y, largura, altura, Color.GRAY, "DEGRAU");
                 case "MOLA" -> new Plataforma(x, y, largura, altura, new Color(225, 65, 45), "MOLA");
+                case "QUEBRADICA" -> new Plataforma(x, y, largura, altura, new Color(120, 126, 138), "QUEBRADICA");
                 case "SERRA_TRILHO" -> new Armadilha(x, y, largura, altura, 0, "SERRA_TRILHO");
                 case "SERRA_FLUTUANTE" -> new Armadilha(x, y, largura, altura, 0, "SERRA_FLUTUANTE");
                 case "ESPINHO" -> new Armadilha(x, y, largura, altura, 0, "ESPINHO");
@@ -111,6 +113,11 @@ public class FaseConstrucao {
     private final int MIN_Y = 80;
     private final int MAX_Y = 660;
 
+    // Áreas protegidas: nascimento (esquerda) e chegada (direita).
+    // Qualquer sobreposição, mesmo parcial, bloqueia a colocação.
+    private final Rectangle areaNascimento = new Rectangle(40, 440, 160, 80);
+    private final Rectangle areaChegada = new Rectangle(1080, 440, 160, 80);
+
     private boolean ativa;
     private boolean menuPergaminhoAberto;
     private int larguraPergaminhoAtual;
@@ -148,7 +155,9 @@ public class FaseConstrucao {
         catalogo.add(new OpcaoPeca("Tabua Madeira", false, false, 120, 20, "MADEIRA"));
         catalogo.add(new OpcaoPeca("Madeirinha", false, false, 60, 20, "MADEIRINHA"));
         catalogo.add(new OpcaoPeca("Escadaria", false, false, 60, 60, "ESCADARIA"));
+        catalogo.add(new OpcaoPeca("Degrau", false, false, 20, 20, "DEGRAU"));
         catalogo.add(new OpcaoPeca("Plataforma Mola", false, false, 40, 20, "MOLA"));
+        catalogo.add(new OpcaoPeca("Plataforma Quebradica", false, false, 100, 20, "QUEBRADICA"));
         catalogo.add(new OpcaoPeca("Plataforma Serra", true, false, 120, 20, "SERRA_TRILHO"));
         catalogo.add(new OpcaoPeca("Serrinha", true, false, 40, 40, "SERRA_FLUTUANTE"));
         catalogo.add(new OpcaoPeca("Espinhos", true, false, 80, 20, "ESPINHO"));
@@ -220,7 +229,8 @@ public class FaseConstrucao {
     private void aplicarEfeitoPeca(OpcaoPeca op, int x, int y, List<ElementoJogo> pecasDoMapa) {
         if (op.bomba) {
             Rectangle areaExplosao = getAreaExplosao3x3(x, y, op.largura, op.altura);
-            pecasDoMapa.removeIf(peca -> (peca instanceof Armadilha) && areaExplosao.intersects(peca.getLimites()));
+            pecasDoMapa.removeIf(peca -> podeSerDestruidaPelaBomba(peca)
+                    && areaExplosao.intersects(peca.getLimites()));
             explosoesAtivas.add(new ExplosaoAnimacao(areaExplosao));
         } else {
             pecasDoMapa.add(op.criarElemento(x, y));
@@ -229,10 +239,22 @@ public class FaseConstrucao {
 
     public void encerrarSePronto(List<ElementoJogo> pecasDoMapa) {
         if (ambosConfirmaram()) {
-            aplicarEfeitoPeca(opcoesSorteadas.get(indiceP1), cursorXP1, cursorYP1, pecasDoMapa);
-            aplicarEfeitoPeca(opcoesSorteadas.get(indiceP2), cursorXP2, cursorYP2, pecasDoMapa);
+            OpcaoPeca p1 = opcoesSorteadas.get(indiceP1);
+            OpcaoPeca p2 = opcoesSorteadas.get(indiceP2);
+
+            // Primeiro entram todas as peças; depois as bombas explodem. Assim,
+            // uma bomba também afeta uma peça confirmada no mesmo turno.
+            if (!p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, pecasDoMapa);
+            if (!p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, pecasDoMapa);
+            if (p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, pecasDoMapa);
+            if (p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, pecasDoMapa);
             ativa = false;
         }
+    }
+
+    private boolean podeSerDestruidaPelaBomba(ElementoJogo peca) {
+        if (peca instanceof Armadilha) return true;
+        return peca instanceof Plataforma plataforma && !"CHAO".equals(plataforma.getTipo());
     }
 
     private int ajustarNaGrade(int valor, int min, int max) {
@@ -246,10 +268,13 @@ public class FaseConstrucao {
         if (x < MIN_X || y < MIN_Y || x + opcao.largura > MAX_X || y + opcao.altura > MAX_Y) {
             return false;
         }
+        Rectangle candidato = new Rectangle(x, y, opcao.largura, opcao.altura);
+        if (candidato.intersects(areaNascimento) || candidato.intersects(areaChegada)) {
+            return false;
+        }
         if (opcao.bomba) {
             return true;
         }
-        Rectangle candidato = new Rectangle(x, y, opcao.largura, opcao.altura);
         for (ElementoJogo peca : pecasDoMapa) {
             if (candidato.intersects(peca.getLimites())) {
                 return false;
@@ -351,6 +376,9 @@ public class FaseConstrucao {
             g2d.drawLine(MIN_X, y, MAX_X, y);
         }
 
+        desenharAreaProtegida(g2d, areaNascimento);
+        desenharAreaProtegida(g2d, areaChegada);
+
         desenharPreview(g2d, cursorXP1, cursorYP1, opcoesSorteadas.get(indiceP1), Color.RED, confirmouPosicaoP1, pecasDoMapa, "P1 [N]");
         desenharPreview(g2d, cursorXP2, cursorYP2, opcoesSorteadas.get(indiceP2), Color.CYAN, confirmouPosicaoP2, pecasDoMapa, "P2 [M]");
     }
@@ -363,6 +391,14 @@ public class FaseConstrucao {
         g2d.fillOval(bx, by, tam, tam);
         g2d.setColor(Color.RED);
         g2d.fillOval(bx + tam / 2 - 2, by - 3, 5, 5);
+    }
+
+    private void desenharAreaProtegida(Graphics2D g2d, Rectangle area) {
+        g2d.setColor(new Color(255, 35, 35, 38));
+        g2d.fillRect(area.x, area.y, area.width, area.height);
+        g2d.setColor(new Color(255, 45, 45));
+        g2d.setStroke(new BasicStroke(3));
+        g2d.drawRect(area.x, area.y, area.width, area.height);
     }
 
     private void desenharPergaminho2x2(Graphics2D g2d) {

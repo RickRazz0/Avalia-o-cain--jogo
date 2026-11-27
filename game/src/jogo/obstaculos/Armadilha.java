@@ -63,6 +63,21 @@ public class Armadilha extends ElementoJogo {
         }
     }
 
+    /**
+     * Verifica o fogo separadamente do bloco do lança-chamas. O jato pode
+     * alcançar o jogador sem que ele encoste no corpo sólido da armadilha.
+     */
+    public boolean causarDanoSeAtingirPeloJato(Jogador jogador) {
+        if (!"LANCA_CHAMAS".equals(tipo)) return false;
+
+        Rectangle jato = getHitboxJatoFogo();
+        if (!jato.isEmpty() && jogador.getLimites().intersects(jato)) {
+            jogador.morrer();
+            return true;
+        }
+        return false;
+    }
+
     public void atualizar(List<ElementoJogo> pecasDoMapa) {
         if ("LANCA_CHAMAS".equals(tipo)) {
             cicloFogoFrames++;
@@ -256,9 +271,7 @@ public class Armadilha extends ElementoJogo {
     public void aoColidir(Jogador jogador) {
         if ("LANCA_CHAMAS".equals(tipo)) {
             // 1. Se encostar no jato de fogo horizontal, morre
-            Rectangle jato = getHitboxJatoFogo();
-            if (!jato.isEmpty() && jogador.getLimites().intersects(jato)) {
-                jogador.morrer();
+            if (causarDanoSeAtingirPeloJato(jogador)) {
                 return;
             }
 

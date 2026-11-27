@@ -11,11 +11,19 @@ import jogo.jogadores.Jogador;
 public class Plataforma extends ElementoJogo {
 
     private final Color cor;
-    private final String tipo; // "CHAO", "MADEIRA", "MADEIRINHA", "DEGRAU", "ESCADARIA", "MOLA"
+    private final String tipo; // "CHAO", "MADEIRA", "MADEIRINHA", "DEGRAU", "ESCADARIA", "MOLA", "QUEBRADICA"
 
     // Animacao da mola ao receber contato por cima
     private int animacaoMolaFrames = 0;
     private final int DURACAO_ANIM_MOLA = 18;
+
+    // O primeiro toque ativa a contagem, que só é reiniciada no próximo round.
+    private static final int TEMPO_QUEBRA_FRAMES = 240; // 4 s a 60 FPS
+    private static final int DURACAO_ANIM_QUEBRA = 30;
+    private int framesApoiadoNaQuebradica = 0;
+    private int animacaoQuebraFrames = 0;
+    private boolean quebradicaAtivada = false;
+    private boolean quebrada = false;
 
     public Plataforma(int x, int y, int largura, int altura, Color cor) {
         this(x, y, largura, altura, cor, "MADEIRA");
@@ -35,6 +43,27 @@ public class Plataforma extends ElementoJogo {
         if ("MOLA".equals(tipo) && animacaoMolaFrames > 0) {
             animacaoMolaFrames--;
         }
+
+        if ("QUEBRADICA".equals(tipo)) {
+            if (!quebrada) {
+                if (quebradicaAtivada) {
+                    framesApoiadoNaQuebradica++;
+                    if (framesApoiadoNaQuebradica >= TEMPO_QUEBRA_FRAMES) {
+                        quebrada = true;
+                        animacaoQuebraFrames = DURACAO_ANIM_QUEBRA;
+                    }
+                }
+            } else if (animacaoQuebraFrames > 0) {
+                animacaoQuebraFrames--;
+            }
+        }
+    }
+
+    public void resetarParaNovoRound() {
+        framesApoiadoNaQuebradica = 0;
+        animacaoQuebraFrames = 0;
+        quebradicaAtivada = false;
+        quebrada = false;
     }
 
     private void desenharMola(Graphics g) {
@@ -92,10 +121,56 @@ public class Plataforma extends ElementoJogo {
         g2d.drawRect(getX(), topoY, getLargura(), topoAltura);
     }
 
+    private void desenharQuebradica(Graphics g) {
+        int x = getX();
+        int y = getY();
+        int w = getLargura();
+        int h = getAltura();
+
+        if (!quebrada) {
+            g.setColor(new Color(120, 126, 138));
+            g.fillRoundRect(x, y, w, h, 5, 5);
+            g.setColor(new Color(65, 70, 80));
+            g.drawRoundRect(x, y, w, h, 5, 5);
+            g.setColor(new Color(190, 195, 205));
+            g.fillRect(x + 4, y + 3, w - 8, 3);
+            g.setColor(new Color(75, 80, 90));
+            g.drawLine(x + w / 2, y + 3, x + w / 2, y + h - 3);
+            return;
+        }
+
+        float progresso = 1.0f - ((float) animacaoQuebraFrames / DURACAO_ANIM_QUEBRA);
+        progresso = Math.max(0.0f, Math.min(1.0f, progresso));
+        int queda = (int) (progresso * 36);
+        int afastamento = (int) (progresso * 12);
+        int metade = w / 2 - 2;
+
+        desenharMetadeQuebradica(g, x - afastamento, y + queda, metade, h, -1);
+        desenharMetadeQuebradica(g, x + w - metade + afastamento, y + queda, metade, h, 1);
+    }
+
+    private void desenharMetadeQuebradica(Graphics g, int x, int y, int w, int h, int lado) {
+        g.setColor(new Color(105, 111, 123));
+        g.fillRoundRect(x, y, w, h, 5, 5);
+        g.setColor(new Color(55, 60, 70));
+        g.drawRoundRect(x, y, w, h, 5, 5);
+        g.setColor(new Color(180, 185, 195));
+        g.fillRect(x + 3, y + 3, w - 6, 3);
+        g.setColor(new Color(45, 48, 58));
+        int bordaQuebrada = lado < 0 ? x + w - 2 : x + 2;
+        g.drawLine(bordaQuebrada, y + 2, bordaQuebrada + lado * 3, y + h / 2);
+        g.drawLine(bordaQuebrada + lado * 3, y + h / 2, bordaQuebrada, y + h - 2);
+    }
+
     @Override
     public void desenhar(Graphics g) {
         if ("MOLA".equals(tipo)) {
             desenharMola(g);
+            return;
+        }
+
+        if ("QUEBRADICA".equals(tipo)) {
+            desenharQuebradica(g);
             return;
         }
 
@@ -142,6 +217,26 @@ public class Plataforma extends ElementoJogo {
 
             // Contato lateral ou por baixo: estatico como objeto solido (sem impulsionar para cima)
             resolverColisaoRetangulo(jogador, rectPlataforma);
+            return;
+        }
+
+        if ("QUEBRADICA".equals(tipo)) {
+            if (quebrada) return;
+
+            Rectangle rectJogador = jogador.getLimites();
+            Rectangle rectPlataforma = this.getLimites();
+            Rectangle intersecao = rectJogador.intersection(rectPlataforma);
+            if (intersecao.isEmpty()) return;
+            quebradicaAtivada = true;
+
+            boolean porCima = jogador.getY() < getY() && jogador.getVelocidadeY() >= 0;
+            if (porCima && intersecao.width >= intersecao.height) {
+                jogador.setY(getY() - jogador.getAltura());
+                jogador.setVelocidadeY(0);
+                jogador.setNoChao(true);
+            } else {
+                resolverColisaoRetangulo(jogador, rectPlataforma);
+            }
             return;
         }
 
