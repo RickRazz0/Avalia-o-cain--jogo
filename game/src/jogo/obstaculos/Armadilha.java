@@ -2,6 +2,7 @@ package jogo.obstaculos;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.List;
 import jogo.base.ElementoJogo;
@@ -10,6 +11,7 @@ import jogo.jogadores.Jogador;
 public class Armadilha extends ElementoJogo {
 
     private final int velocidadeX;
+    private final int velocidadeY;
     private final int xInicial;
     private final String tipo; // "ESPINHO", "FLECHA", "SERRA_TRILHO", "SERRA_FLUTUANTE", "LANCA_CHAMAS"
 
@@ -20,20 +22,45 @@ public class Armadilha extends ElementoJogo {
     private int cicloFogoFrames = 0;
     private int direcaoFogo = 1; // 1 = direita, -1 = esquerda
     private int comprimentoJatoAtual = 0;
+    private int rotacao = 0;
+    private int contadorDisparoBesta = 0;
+    private static final int INTERVALO_DISPARO_BESTA = 75;
 
     public Armadilha(int x, int y, int largura, int altura, int velocidadeX) {
         this(x, y, largura, altura, velocidadeX, velocidadeX != 0 ? "FLECHA" : "ESPINHO");
     }
 
     public Armadilha(int x, int y, int largura, int altura, int velocidadeX, String tipo) {
+        this(x, y, largura, altura, velocidadeX, 0, tipo);
+    }
+
+    public Armadilha(int x, int y, int largura, int altura, int velocidadeX, int velocidadeY) {
+        this(x, y, largura, altura, velocidadeX, velocidadeY, "FLECHA");
+    }
+
+    private Armadilha(int x, int y, int largura, int altura, int velocidadeX, int velocidadeY, String tipo) {
         super(x, y, largura, altura);
         this.velocidadeX = velocidadeX;
+        this.velocidadeY = velocidadeY;
         this.xInicial = x;
         this.tipo = tipo;
     }
 
     public String getTipo() {
         return tipo;
+    }
+
+    public void girarHorario() {
+        super.girarHorario();
+        rotacao = (rotacao + 1) % 4;
+    }
+
+    private int direcaoX() {
+        return switch (rotacao) { case 0 -> 1; case 2 -> -1; default -> 0; };
+    }
+
+    private int direcaoY() {
+        return switch (rotacao) { case 1 -> 1; case 3 -> -1; default -> 0; };
     }
 
     private Rectangle getHitboxSerraTrilho() {
@@ -79,6 +106,24 @@ public class Armadilha extends ElementoJogo {
     }
 
     public void atualizar(List<ElementoJogo> pecasDoMapa) {
+        if ("BESTA".equals(tipo)) {
+            contadorDisparoBesta++;
+            if (contadorDisparoBesta >= INTERVALO_DISPARO_BESTA) {
+                contadorDisparoBesta = 0;
+                int dx = direcaoX();
+                int dy = direcaoY();
+                int flechaW = dx == 0 ? 8 : 20;
+                int flechaH = dy == 0 ? 8 : 20;
+                int flechaX = getX() + getLargura() / 2 - flechaW / 2;
+                int flechaY = getY() + getAltura() / 2 - flechaH / 2;
+                if (dx > 0) flechaX = getX() + getLargura();
+                if (dx < 0) flechaX = getX() - flechaW;
+                if (dy > 0) flechaY = getY() + getAltura();
+                if (dy < 0) flechaY = getY() - flechaH;
+                pecasDoMapa.add(new Armadilha(flechaX, flechaY, flechaW, flechaH, 5 * dx, 5 * dy));
+            }
+            return;
+        }
         if ("LANCA_CHAMAS".equals(tipo)) {
             cicloFogoFrames++;
             if (cicloFogoFrames % 150 == 0) {
@@ -128,27 +173,27 @@ public class Armadilha extends ElementoJogo {
             return;
         }
 
-        if (velocidadeX == 0) return;
+        if (velocidadeX == 0 && velocidadeY == 0) return;
 
         setX(getX() + velocidadeX);
+        setY(getY() + velocidadeY);
 
-        boolean saiuDoMapa = (getX() + getLargura() < 0) || (getX() > 1280);
+        boolean saiuDoMapa = (getX() + getLargura() < 0) || (getX() > 1280)
+                || (getY() + getAltura() < 0) || (getY() > 720);
         boolean bateuEmSolido = false;
 
         if (pecasDoMapa != null) {
             for (ElementoJogo peca : pecasDoMapa) {
                 if (peca == this) continue;
-                if (peca instanceof Plataforma || peca instanceof Arco) {
-                    if (this.getLimites().intersects(peca.getLimites())) {
-                        bateuEmSolido = true;
-                        break;
-                    }
+                if (this.getLimites().intersects(peca.getLimites())) {
+                    bateuEmSolido = true;
+                    break;
                 }
             }
         }
 
         if (saiuDoMapa || bateuEmSolido) {
-            setX(xInicial);
+            pecasDoMapa.remove(this);
         }
     }
 
@@ -217,6 +262,10 @@ public class Armadilha extends ElementoJogo {
 
     @Override
     public void desenhar(Graphics g) {
+        if ("BESTA".equals(tipo)) {
+            desenharBesta(g);
+            return;
+        }
         if ("LANCA_CHAMAS".equals(tipo)) {
             desenharLancaChamas(g);
             return;
@@ -265,6 +314,22 @@ public class Armadilha extends ElementoJogo {
                 g.fillPolygon(px, py, 3);
             }
         }
+    }
+
+    private void desenharBesta(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g.create();
+        int cx = getX() + getLargura() / 2;
+        int cy = getY() + getAltura() / 2;
+        g2d.rotate(rotacao * Math.PI / 2, cx, cy);
+        g2d.setColor(new Color(75, 55, 35));
+        g2d.fillRoundRect(getX() + 4, getY() + 14, 32, 12, 4, 4);
+        g2d.setColor(new Color(195, 160, 90));
+        g2d.drawLine(getX() + 8, getY() + 7, getX() + 8, getY() + 33);
+        g2d.drawLine(getX() + 8, getY() + 7, getX() + 32, getY() + 20);
+        g2d.drawLine(getX() + 8, getY() + 33, getX() + 32, getY() + 20);
+        g2d.setColor(new Color(210, 215, 220));
+        g2d.fillRect(getX() + 20, getY() + 18, 18, 4);
+        g2d.dispose();
     }
 
     @Override

@@ -43,9 +43,11 @@ public class FaseConstrucao {
                 case "SERRA_FLUTUANTE" -> new Armadilha(x, y, largura, altura, 0, "SERRA_FLUTUANTE");
                 case "ESPINHO" -> new Armadilha(x, y, largura, altura, 0, "ESPINHO");
                 case "LANCA_CHAMAS" -> new Armadilha(x, y, largura, altura, 0, "LANCA_CHAMAS");
+                case "BESTA" -> new Armadilha(x, y, largura, altura, 0, "BESTA");
                 default -> new Plataforma(x, y, largura, altura, new Color(139, 69, 19), "MADEIRA");
             };
         }
+
     }
 
     private static class ExplosaoAnimacao {
@@ -130,12 +132,14 @@ public class FaseConstrucao {
     private int cursorXP1;
     private int cursorYP1;
     private boolean confirmouPosicaoP1;
+    private int rotacaoP1;
 
     private int indiceP2;
     private boolean escolheuCartaP2;
     private int cursorXP2;
     private int cursorYP2;
     private boolean confirmouPosicaoP2;
+    private int rotacaoP2;
 
     public FaseConstrucao() {
         this.ativa = false;
@@ -162,6 +166,7 @@ public class FaseConstrucao {
         catalogo.add(new OpcaoPeca("Serrinha", true, false, 40, 40, "SERRA_FLUTUANTE"));
         catalogo.add(new OpcaoPeca("Espinhos", true, false, 80, 20, "ESPINHO"));
         catalogo.add(new OpcaoPeca("Lanca-chamas", true, false, 40, 40, "LANCA_CHAMAS"));
+        catalogo.add(new OpcaoPeca("Besta", true, false, 40, 40, "BESTA"));
         catalogo.add(new OpcaoPeca("Bomba 3x3", false, true, 20, 20, "BOMBA"));
 
         Collections.shuffle(catalogo);
@@ -174,12 +179,14 @@ public class FaseConstrucao {
         cursorXP1 = 440;
         cursorYP1 = 360;
         confirmouPosicaoP1 = false;
+        rotacaoP1 = 0;
 
         indiceP2 = 1;
         escolheuCartaP2 = false;
         cursorXP2 = 720;
         cursorYP2 = 360;
         confirmouPosicaoP2 = false;
+        rotacaoP2 = 0;
     }
 
     public boolean isAtiva() {
@@ -226,14 +233,16 @@ public class FaseConstrucao {
         return new Rectangle(x - raio, y - raio, largura + raio * 2, altura + raio * 2);
     }
 
-    private void aplicarEfeitoPeca(OpcaoPeca op, int x, int y, List<ElementoJogo> pecasDoMapa) {
+    private void aplicarEfeitoPeca(OpcaoPeca op, int x, int y, int rotacao, List<ElementoJogo> pecasDoMapa) {
         if (op.bomba) {
             Rectangle areaExplosao = getAreaExplosao3x3(x, y, op.largura, op.altura);
             pecasDoMapa.removeIf(peca -> podeSerDestruidaPelaBomba(peca)
                     && areaExplosao.intersects(peca.getLimites()));
             explosoesAtivas.add(new ExplosaoAnimacao(areaExplosao));
         } else {
-            pecasDoMapa.add(op.criarElemento(x, y));
+            ElementoJogo elemento = op.criarElemento(x, y);
+            for (int i = 0; i < rotacao; i++) elemento.girarHorario();
+            pecasDoMapa.add(elemento);
         }
     }
 
@@ -244,10 +253,10 @@ public class FaseConstrucao {
 
             // Primeiro entram todas as peças; depois as bombas explodem. Assim,
             // uma bomba também afeta uma peça confirmada no mesmo turno.
-            if (!p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, pecasDoMapa);
-            if (!p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, pecasDoMapa);
-            if (p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, pecasDoMapa);
-            if (p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, pecasDoMapa);
+            if (!p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, rotacaoP1, pecasDoMapa);
+            if (!p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, rotacaoP2, pecasDoMapa);
+            if (p1.bomba) aplicarEfeitoPeca(p1, cursorXP1, cursorYP1, rotacaoP1, pecasDoMapa);
+            if (p2.bomba) aplicarEfeitoPeca(p2, cursorXP2, cursorYP2, rotacaoP2, pecasDoMapa);
             ativa = false;
         }
     }
@@ -264,11 +273,21 @@ public class FaseConstrucao {
         return alinhado;
     }
 
-    public boolean posicaoValida(int x, int y, OpcaoPeca opcao, List<ElementoJogo> pecasDoMapa) {
-        if (x < MIN_X || y < MIN_Y || x + opcao.largura > MAX_X || y + opcao.altura > MAX_Y) {
+    private int larguraRotacionada(OpcaoPeca opcao, int rotacao) {
+        return rotacao % 2 == 0 ? opcao.largura : opcao.altura;
+    }
+
+    private int alturaRotacionada(OpcaoPeca opcao, int rotacao) {
+        return rotacao % 2 == 0 ? opcao.altura : opcao.largura;
+    }
+
+    public boolean posicaoValida(int x, int y, OpcaoPeca opcao, int rotacao, List<ElementoJogo> pecasDoMapa) {
+        int largura = larguraRotacionada(opcao, rotacao);
+        int altura = alturaRotacionada(opcao, rotacao);
+        if (x < MIN_X || y < MIN_Y || x + largura > MAX_X || y + altura > MAX_Y) {
             return false;
         }
-        Rectangle candidato = new Rectangle(x, y, opcao.largura, opcao.altura);
+        Rectangle candidato = new Rectangle(x, y, largura, altura);
         if (candidato.intersects(areaNascimento) || candidato.intersects(areaChegada)) {
             return false;
         }
@@ -312,12 +331,13 @@ public class FaseConstrucao {
         OpcaoPeca atual = opcoesSorteadas.get(indiceP1);
 
         switch (comando) {
-            case "CIMA" -> cursorYP1 = ajustarNaGrade(cursorYP1 - TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
-            case "BAIXO" -> cursorYP1 = ajustarNaGrade(cursorYP1 + TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
-            case "ESQ" -> cursorXP1 = ajustarNaGrade(cursorXP1 - TAM_GRADE, MIN_X, MAX_X - atual.largura);
-            case "DIR" -> cursorXP1 = ajustarNaGrade(cursorXP1 + TAM_GRADE, MIN_X, MAX_X - atual.largura);
+            case "CIMA" -> cursorYP1 = ajustarNaGrade(cursorYP1 - TAM_GRADE, MIN_Y, MAX_Y - alturaRotacionada(atual, rotacaoP1));
+            case "BAIXO" -> cursorYP1 = ajustarNaGrade(cursorYP1 + TAM_GRADE, MIN_Y, MAX_Y - alturaRotacionada(atual, rotacaoP1));
+            case "ESQ" -> cursorXP1 = ajustarNaGrade(cursorXP1 - TAM_GRADE, MIN_X, MAX_X - larguraRotacionada(atual, rotacaoP1));
+            case "DIR" -> cursorXP1 = ajustarNaGrade(cursorXP1 + TAM_GRADE, MIN_X, MAX_X - larguraRotacionada(atual, rotacaoP1));
+            case "GIRAR" -> rotacaoP1 = (rotacaoP1 + 1) % 4;
             case "CONFIRMAR" -> {
-                if (posicaoValida(cursorXP1, cursorYP1, atual, pecasDoMapa)) {
+                if (posicaoValida(cursorXP1, cursorYP1, atual, rotacaoP1, pecasDoMapa)) {
                     confirmouPosicaoP1 = true;
                 }
             }
@@ -347,12 +367,13 @@ public class FaseConstrucao {
         OpcaoPeca atual = opcoesSorteadas.get(indiceP2);
 
         switch (comando) {
-            case "CIMA" -> cursorYP2 = ajustarNaGrade(cursorYP2 - TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
-            case "BAIXO" -> cursorYP2 = ajustarNaGrade(cursorYP2 + TAM_GRADE, MIN_Y, MAX_Y - atual.altura);
-            case "ESQ" -> cursorXP2 = ajustarNaGrade(cursorXP2 - TAM_GRADE, MIN_X, MAX_X - atual.largura);
-            case "DIR" -> cursorXP2 = ajustarNaGrade(cursorXP2 + TAM_GRADE, MIN_X, MAX_X - atual.largura);
+            case "CIMA" -> cursorYP2 = ajustarNaGrade(cursorYP2 - TAM_GRADE, MIN_Y, MAX_Y - alturaRotacionada(atual, rotacaoP2));
+            case "BAIXO" -> cursorYP2 = ajustarNaGrade(cursorYP2 + TAM_GRADE, MIN_Y, MAX_Y - alturaRotacionada(atual, rotacaoP2));
+            case "ESQ" -> cursorXP2 = ajustarNaGrade(cursorXP2 - TAM_GRADE, MIN_X, MAX_X - larguraRotacionada(atual, rotacaoP2));
+            case "DIR" -> cursorXP2 = ajustarNaGrade(cursorXP2 + TAM_GRADE, MIN_X, MAX_X - larguraRotacionada(atual, rotacaoP2));
+            case "GIRAR" -> rotacaoP2 = (rotacaoP2 + 1) % 4;
             case "CONFIRMAR" -> {
-                if (posicaoValida(cursorXP2, cursorYP2, atual, pecasDoMapa)) {
+                if (posicaoValida(cursorXP2, cursorYP2, atual, rotacaoP2, pecasDoMapa)) {
                     confirmouPosicaoP2 = true;
                 }
             }
@@ -379,8 +400,8 @@ public class FaseConstrucao {
         desenharAreaProtegida(g2d, areaNascimento);
         desenharAreaProtegida(g2d, areaChegada);
 
-        desenharPreview(g2d, cursorXP1, cursorYP1, opcoesSorteadas.get(indiceP1), Color.RED, confirmouPosicaoP1, pecasDoMapa, "P1 [N]");
-        desenharPreview(g2d, cursorXP2, cursorYP2, opcoesSorteadas.get(indiceP2), Color.CYAN, confirmouPosicaoP2, pecasDoMapa, "P2 [M]");
+        desenharPreview(g2d, cursorXP1, cursorYP1, opcoesSorteadas.get(indiceP1), rotacaoP1, Color.RED, confirmouPosicaoP1, pecasDoMapa, "P1 [N]");
+        desenharPreview(g2d, cursorXP2, cursorYP2, opcoesSorteadas.get(indiceP2), rotacaoP2, Color.CYAN, confirmouPosicaoP2, pecasDoMapa, "P2 [M]");
     }
 
     private void desenharBombaVisual(Graphics2D g2d, int x, int y, int w, int h) {
@@ -482,18 +503,20 @@ public class FaseConstrucao {
         }
     }
 
-    private void desenharPreview(Graphics2D g2d, int x, int y, OpcaoPeca op, Color corBorda,
+    private void desenharPreview(Graphics2D g2d, int x, int y, OpcaoPeca op, int rotacao, Color corBorda,
                                  boolean confirmado, List<ElementoJogo> pecasDoMapa, String rotulo) {
-        boolean valido = posicaoValida(x, y, op, pecasDoMapa);
+        int largura = larguraRotacionada(op, rotacao);
+        int altura = alturaRotacionada(op, rotacao);
+        boolean valido = posicaoValida(x, y, op, rotacao, pecasDoMapa);
         Color preenchimento = confirmado
             ? new Color(50, 200, 90, 135)
             : (valido ? new Color(255, 255, 255, 85) : new Color(220, 40, 40, 120));
 
         g2d.setColor(preenchimento);
-        g2d.fillRect(x, y, op.largura, op.altura);
+        g2d.fillRect(x, y, largura, altura);
 
         if (op.bomba) {
-            Rectangle area3x3 = getAreaExplosao3x3(x, y, op.largura, op.altura);
+            Rectangle area3x3 = getAreaExplosao3x3(x, y, largura, altura);
             g2d.setColor(new Color(255, 90, 40, 65));
             g2d.fillRect(area3x3.x, area3x3.y, area3x3.width, area3x3.height);
             g2d.setColor(Color.ORANGE);
@@ -503,9 +526,9 @@ public class FaseConstrucao {
 
         g2d.setStroke(new BasicStroke(2));
         g2d.setColor(valido ? corBorda : Color.RED);
-        g2d.drawRect(x, y, op.largura, op.altura);
+        g2d.drawRect(x, y, largura, altura);
 
         g2d.setFont(new Font("SansSerif", Font.BOLD, 12));
-        g2d.drawString(rotulo + (confirmado ? " (OK)" : (valido ? "" : " [BLOQUEADO]")), x + 2, y - 4);
+        g2d.drawString(rotulo + " " + (rotacao * 90) + "°" + (confirmado ? " (OK)" : (valido ? "" : " [BLOQUEADO]")), x + 2, y - 4);
     }
 }

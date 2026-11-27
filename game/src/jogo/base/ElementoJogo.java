@@ -12,12 +12,14 @@ public abstract class ElementoJogo {
     private int y;
     private int largura;
     private int altura;
+    private int rotacao;
 
     public ElementoJogo(int x, int y, int largura, int altura) {
         this.x = x;
         this.y = y;
         this.largura = largura;
         this.altura = altura;
+        this.rotacao = 0;
     }
 
     // Métodos abstratos que obrigam as classes filhas a implementarem (Polimorfismo)
@@ -36,4 +38,14 @@ public abstract class ElementoJogo {
     public void setY(int y) { this.y = y; }
     public int getLargura() { return largura; }
     public int getAltura() { return altura; }
+
+    public int getRotacao() { return rotacao; }
+
+    /** Gira 90 graus no sentido horário e atualiza a hitbox da peça. */
+    public void girarHorario() {
+        rotacao = (rotacao + 1) % 4;
+        int dimensaoAnterior = largura;
+        largura = altura;
+        altura = dimensaoAnterior;
+    }
 }

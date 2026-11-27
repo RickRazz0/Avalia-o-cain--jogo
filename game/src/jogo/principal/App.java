@@ -129,7 +129,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
     }
 
     private void resetarPlataformasDoRound() {
-        for (ElementoJogo peca : pecasDoMapa) {
+        for (ElementoJogo peca : new ArrayList<>(pecasDoMapa)) {
             if (peca instanceof Plataforma plataforma) {
                 plataforma.resetarParaNovoRound();
             }
@@ -169,6 +169,9 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             if (jogador.getLimites().intersects(peca.getLimites())) {
                 peca.aoColidir(jogador);
                 if (jogador.isVenceuNoRound() || jogador.isMorreuNoRound()) {
+                    if (peca instanceof Armadilha armadilha && "FLECHA".equals(armadilha.getTipo())) {
+                        pecasDoMapa.remove(peca);
+                    }
                     return;
                 }
             }
@@ -271,7 +274,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
 
         if (faseConstrucao.isAtiva()) {
             g2d.drawString(
-                "CONSTRUCAO | P1: WASD + [N] confirmar | P2: Setas + [M] confirmar",
+                "CONSTRUCAO | P1: WASD + [E] girar + [N] confirmar | P2: Setas + [Ç] girar + [M] confirmar",
                 40, 36
             );
             faseConstrucao.desenhar(g2d, pecasDoMapa);
@@ -312,7 +315,7 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             faseConstrucao.atualizarExplosoes();
         }
 
-        for (ElementoJogo peca : pecasDoMapa) {
+        for (ElementoJogo peca : new ArrayList<>(pecasDoMapa)) {
             if (peca instanceof Armadilha armadilha) {
                 armadilha.atualizar(pecasDoMapa);
             } else if (peca instanceof Plataforma plataforma) {
@@ -379,12 +382,14 @@ public class App extends JPanel implements ActionListener, KeyListener, MouseLis
             if (tecla == KeyEvent.VK_A) faseConstrucao.acaoP1("ESQ", pecasDoMapa);
             if (tecla == KeyEvent.VK_D) faseConstrucao.acaoP1("DIR", pecasDoMapa);
             if (tecla == KeyEvent.VK_N) faseConstrucao.acaoP1("CONFIRMAR", pecasDoMapa);
+            if (tecla == KeyEvent.VK_E) faseConstrucao.acaoP1("GIRAR", pecasDoMapa);
 
             if (tecla == KeyEvent.VK_UP)    faseConstrucao.acaoP2("CIMA", pecasDoMapa);
             if (tecla == KeyEvent.VK_DOWN)  faseConstrucao.acaoP2("BAIXO", pecasDoMapa);
             if (tecla == KeyEvent.VK_LEFT)  faseConstrucao.acaoP2("ESQ", pecasDoMapa);
             if (tecla == KeyEvent.VK_RIGHT) faseConstrucao.acaoP2("DIR", pecasDoMapa);
             if (tecla == KeyEvent.VK_M)     faseConstrucao.acaoP2("CONFIRMAR", pecasDoMapa);
+            if (tecla == KeyEvent.VK_SEMICOLON) faseConstrucao.acaoP2("GIRAR", pecasDoMapa); // tecla Ç no layout ABNT2
             return;
         }
 
